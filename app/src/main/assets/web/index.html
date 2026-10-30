@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0f1419" id="themeColorMeta" />
-  <title>热点管理</title>
+  <title>Hotspot Management</title>
   <script>
     // Applied synchronously, before first paint, so switching themes never flashes
     // the wrong palette on load. Kept tiny and dependency-free on purpose.
@@ -24,13 +24,13 @@
   <div id="loginView" class="wrap">
     <div class="login">
       <div class="logo">
-        <div class="big">热点管理</div>
-        <div class="sub">请输入访问密码</div>
+        <div class="big">Hotspot Management</div>
+        <div class="sub">Enter access password</div>
       </div>
       <div class="card">
-        <label class="field"><span class="cap">密码</span>
+        <label class="field"><span class="cap">Password</span>
           <input id="loginPw" type="password" autocomplete="current-password" /></label>
-        <button class="btn" id="loginBtn">登录</button>
+        <button class="btn" id="loginBtn">Login</button>
         <div class="spacer"></div>
         <div id="loginErr" class="muted" style="color:var(--danger)"></div>
       </div>
@@ -43,180 +43,180 @@
 
       <!-- Desktop/tablet side navigation (hamburger-driven drawer / rail) -->
       <nav class="sidenav" id="sideNav">
-        <button class="navitem active" data-go="home" title="首页">
+        <button class="navitem active" data-go="home" title="Home">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-          <span class="navlabel">首页</span>
+          <span class="navlabel">Home</span>
         </button>
         <button class="navitem" data-go="wifi" title="WiFi">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
           <span class="navlabel">WiFi</span>
         </button>
-        <button class="navitem" data-go="data" title="流量">
+        <button class="navitem" data-go="data" title="Data">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-          <span class="navlabel">流量</span>
+          <span class="navlabel">Data</span>
         </button>
-        <button class="navitem" data-go="sms" title="短信">
+        <button class="navitem" data-go="sms" title="SMS">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-          <span class="navlabel">短信</span>
+          <span class="navlabel">SMS</span>
         </button>
-        <button class="navitem" data-go="files" title="文件">
+        <button class="navitem" data-go="files" title="Files">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-          <span class="navlabel">文件</span>
+          <span class="navlabel">Files</span>
         </button>
       </nav>
 
       <div class="main">
         <div class="topbar">
           <div class="left">
-            <button class="hamburger" id="hamburgerBtn" aria-label="菜单">
+            <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
-            <h1>热点管理</h1>
+            <h1>Hotspot Management</h1>
           </div>
           <div class="right">
-            <button class="icon-round" id="themeToggle" title="切换主题" aria-label="切换主题">
+            <button class="icon-round" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
             </button>
             <span id="statePill" class="pill off">—</span>
-            <button class="linkbtn" id="logoutBtn">退出</button>
+            <button class="linkbtn" id="logoutBtn">Log out</button>
           </div>
         </div>
 
         <div class="wrap">
-          <!-- ============ 首页 ============ -->
+          <!-- ============ Home ============ -->
           <section class="tab" data-tab="home">
             <div class="card">
-              <h2>概览</h2>
+              <h2>Overview</h2>
               <div class="stats">
-                <div class="stat"><div class="k">热点状态</div><div class="v" id="sState">—</div></div>
-                <div class="stat"><div class="k">在线设备</div><div class="v" id="sClients">—</div></div>
-                <div class="stat"><div class="k">运行时长</div><div class="v" id="sUptime">—</div></div>
-                <div class="stat"><div class="k">剩余流量</div><div class="v" id="sRemain" style="font-size:17px">—</div></div>
-                <div class="stat"><div class="k">热点下行</div><div class="v" id="sDown">—</div></div>
-                <div class="stat"><div class="k">热点上行</div><div class="v" id="sUp">—</div></div>
+                <div class="stat"><div class="k">Hotspot status</div><div class="v" id="sState">—</div></div>
+                <div class="stat"><div class="k">Online devices</div><div class="v" id="sClients">—</div></div>
+                <div class="stat"><div class="k">Uptime</div><div class="v" id="sUptime">—</div></div>
+                <div class="stat"><div class="k">Data remaining</div><div class="v" id="sRemain" style="font-size:17px">—</div></div>
+                <div class="stat"><div class="k">Hotspot download</div><div class="v" id="sDown">—</div></div>
+                <div class="stat"><div class="k">Hotspot upload</div><div class="v" id="sUp">—</div></div>
               </div>
               <div class="spacer"></div>
               <div class="toggle-row">
-                <span class="label">热点开关</span>
+                <span class="label">Hotspot</span>
                 <label class="switch"><input type="checkbox" id="hotspotSw" /><span class="slider"></span></label>
               </div>
               <div class="spacer"></div>
-              <button class="btn secondary" id="rebootBtn">重启热点</button>
+              <button class="btn secondary" id="rebootBtn">Restart hotspot</button>
             </div>
 
             <div class="card">
-              <h2>在线设备 <button class="linkbtn" id="refreshClients">刷新</button></h2>
-              <div id="clients"><div class="muted">加载中…</div></div>
+              <h2>Online devices <button class="linkbtn" id="refreshClients">Refresh</button></h2>
+              <div id="clients"><div class="muted">Loading…</div></div>
             </div>
           </section>
 
           <!-- ============ WiFi ============ -->
           <section class="tab hidden" data-tab="wifi">
             <div class="card">
-              <h2>WiFi 设置</h2>
-              <label class="field"><span class="cap">网络名称 (SSID)</span><input id="ssid" type="text" /></label>
-              <label class="field"><span class="cap">密码 (开放网络可留空)</span><input id="passphrase" type="text" /></label>
+              <h2>WiFi settings</h2>
+              <label class="field"><span class="cap">Network name (SSID)</span><input id="ssid" type="text" /></label>
+              <label class="field"><span class="cap">Password (leave blank for open network)</span><input id="passphrase" type="text" /></label>
               <div class="row2">
-                <label class="field"><span class="cap">加密方式</span>
+                <label class="field"><span class="cap">Security</span>
                   <select id="security">
-                    <option value="0">开放</option><option value="1">WPA2</option>
+                    <option value="0">Open</option><option value="1">WPA2</option>
                     <option value="2">WPA2/WPA3</option><option value="3">WPA3</option>
                   </select></label>
-                <label class="field"><span class="cap">频段</span>
+                <label class="field"><span class="cap">Band</span>
                   <select id="band"><option value="1">2.4G</option><option value="2">5G</option></select></label>
               </div>
               <div class="row2">
-                <label class="field"><span class="cap">最大连接数 (0=默认)</span>
+                <label class="field"><span class="cap">Maximum clients (0=default)</span>
                   <input id="maxClients" type="number" min="0" max="32" /></label>
-                <label class="field"><span class="cap">隐藏网络</span>
-                  <select id="hidden"><option value="false">否</option><option value="true">是</option></select></label>
+                <label class="field"><span class="cap">Hidden network</span>
+                  <select id="hidden"><option value="false">No</option><option value="true">Yes</option></select></label>
               </div>
-              <button class="btn" id="saveCfgBtn">保存并应用</button>
+              <button class="btn" id="saveCfgBtn">Save and apply</button>
               <div class="spacer"></div>
-              <div class="muted">保存后若热点开启中将自动重启以生效</div>
+              <div class="muted">The hotspot restarts automatically if it is on when settings are saved</div>
             </div>
             <div class="card">
-              <h2>扫码连接</h2>
+              <h2>Scan to connect</h2>
               <div class="qrbox"><div id="qr"></div></div>
             </div>
           </section>
 
-          <!-- ============ 流量 / 限速 / 定时 ============ -->
+          <!-- ============ Data / Speed limit / Schedules ============ -->
           <section class="tab hidden" data-tab="data">
             <div class="card">
-              <h2>流量余量</h2>
+              <h2>Data allowance</h2>
               <div class="stats">
-                <div class="stat"><div class="k">本周期已用</div><div class="v" id="dUsed" style="font-size:18px">—</div></div>
-                <div class="stat"><div class="k">剩余</div><div class="v" id="dRemain" style="font-size:18px">—</div></div>
+                <div class="stat"><div class="k">Used this cycle</div><div class="v" id="dUsed" style="font-size:18px">—</div></div>
+                <div class="stat"><div class="k">Remaining</div><div class="v" id="dRemain" style="font-size:18px">—</div></div>
               </div>
               <div id="dBar" class="bar"><div id="dBarFill" class="bar-fill"></div></div>
               <div class="muted" id="dMeta" style="margin-top:8px">—</div>
               <div class="spacer"></div>
               <div class="row2">
-                <label class="field"><span class="cap">月套餐总量 (GB)</span>
+                <label class="field"><span class="cap">Monthly plan (GB)</span>
                   <input id="quotaGb" type="number" min="0" step="0.1" /></label>
-                <label class="field"><span class="cap">结算日 (每月)</span>
+                <label class="field"><span class="cap">Billing day (each month)</span>
                   <input id="resetDay" type="number" min="1" max="28" /></label>
               </div>
               <div class="row2">
-                <button class="btn" id="savePlanBtn">保存套餐</button>
-                <button class="btn secondary" id="refreshUsageBtn">立即刷新</button>
+                <button class="btn" id="savePlanBtn">Save plan</button>
+                <button class="btn secondary" id="refreshUsageBtn">Refresh now</button>
               </div>
-              <div class="muted" style="margin-top:8px">已用流量读取系统统计，后台每 30 分钟自动刷新</div>
+              <div class="muted" style="margin-top:8px">Usage is read from system statistics and refreshed every 30 minutes in the background</div>
             </div>
 
             <div class="card">
-              <h2>热点限速</h2>
+              <h2>Hotspot speed limit</h2>
               <div class="row2">
-                <label class="field"><span class="cap">下行限速 (Mbps, 0=不限)</span>
+                <label class="field"><span class="cap">Download limit (Mbps, 0=unlimited)</span>
                   <input id="downMbps" type="number" min="0" step="0.5" /></label>
-                <label class="field"><span class="cap">上行限速 (Mbps, 0=不限)</span>
+                <label class="field"><span class="cap">Upload limit (Mbps, 0=unlimited)</span>
                   <input id="upMbps" type="number" min="0" step="0.5" /></label>
               </div>
-              <button class="btn" id="saveSpeedBtn">应用限速</button>
-              <div class="muted" style="margin-top:8px">对整个热点生效，热点重启后自动恢复</div>
+              <button class="btn" id="saveSpeedBtn">Apply limits</button>
+              <div class="muted" style="margin-top:8px">Applies to the whole hotspot and resets after a hotspot restart</div>
             </div>
 
             <div class="card">
-              <h2>定时开关 <button class="linkbtn" id="addSchedBtn">+ 添加</button></h2>
-              <div id="schedList"><div class="muted">加载中…</div></div>
+              <h2>Schedules <button class="linkbtn" id="addSchedBtn">+ Add</button></h2>
+              <div id="schedList"><div class="muted">Loading…</div></div>
             </div>
           </section>
 
-          <!-- ============ 短信 ============ -->
+          <!-- ============ SMS ============ -->
           <section class="tab hidden" data-tab="sms">
             <div class="sms-shell" id="smsShell">
               <!-- left: conversations -->
               <div class="sms-list">
                 <div class="sms-list-head">
-                  <h2>短信</h2>
-                  <button class="chip active" id="smsNewBtn">+ 新短信</button>
+                  <h2>SMS</h2>
+                  <button class="chip active" id="smsNewBtn">+ New message</button>
                 </div>
-                <div id="smsThreads" class="sms-threads"><div class="muted" style="padding:16px">加载中…</div></div>
+                <div id="smsThreads" class="sms-threads"><div class="muted" style="padding:16px">Loading…</div></div>
               </div>
 
               <!-- right: conversation thread -->
               <div class="sms-thread">
                 <div class="sms-thread-head">
-                  <button class="iconbtn sms-back" id="smsBackBtn" aria-label="返回">
+                  <button class="iconbtn sms-back" id="smsBackBtn" aria-label="Back">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                   </button>
                   <div class="grow">
-                    <div id="smsPeerName" class="t1">选择一个会话</div>
+                    <div id="smsPeerName" class="t1">Select a conversation</div>
                     <div id="smsPeerSub" class="muted"></div>
                   </div>
                   <select id="smsSub"></select>
                 </div>
                 <div id="smsMessages" class="sms-messages">
-                  <div class="sms-empty">从左侧选择会话，或点击"新短信"</div>
+                  <div class="sms-empty">Select a conversation on the left, or tap &quot;New message&quot;</div>
                 </div>
                 <div class="sms-to-row hidden" id="smsToRow">
-                  <span class="cap">收件人</span>
-                  <input id="smsTo" type="text" inputmode="tel" placeholder="输入手机号码…" />
+                  <span class="cap">Recipient</span>
+                  <input id="smsTo" type="text" inputmode="tel" placeholder="Enter phone number…" />
                 </div>
                 <div class="sms-composer">
-                  <textarea id="smsBody" rows="1" placeholder="输入短信内容…"></textarea>
-                  <button class="send-btn" id="smsSendBtn" aria-label="发送">
+                  <textarea id="smsBody" rows="1" placeholder="Enter message…"></textarea>
+                  <button class="send-btn" id="smsSendBtn" aria-label="Send">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                   </button>
                 </div>
@@ -224,17 +224,17 @@
             </div>
           </section>
 
-          <!-- ============ 文件 ============ -->
+          <!-- ============ Files ============ -->
           <section class="tab hidden" data-tab="files">
             <div class="card">
-              <h2>文件管理
+              <h2>File management
                 <span style="float:right">
-                  <button class="chip" id="fMkdir">新建文件夹</button>
-                  <button class="chip" id="fUpload">上传</button>
+                  <button class="chip" id="fMkdir">New folder</button>
+                  <button class="chip" id="fUpload">Upload</button>
                 </span>
               </h2>
               <div id="fPath" class="crumb muted">/</div>
-              <div id="fList"><div class="muted">加载中…</div></div>
+              <div id="fList"><div class="muted">Loading…</div></div>
               <input id="fFile" type="file" class="hidden" />
             </div>
           </section>
@@ -248,7 +248,7 @@
     <nav class="tabbar" id="tabBar">
       <button class="tabbtn active" data-go="home">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-        <span class="navlabel">首页</span>
+        <span class="navlabel">Home</span>
       </button>
       <button class="tabbtn" data-go="wifi">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
@@ -256,15 +256,15 @@
       </button>
       <button class="tabbtn" data-go="data">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-        <span class="navlabel">流量</span>
+        <span class="navlabel">Data</span>
       </button>
       <button class="tabbtn" data-go="sms">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-        <span class="navlabel">短信</span>
+        <span class="navlabel">SMS</span>
       </button>
       <button class="tabbtn" data-go="files">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-        <span class="navlabel">文件</span>
+        <span class="navlabel">Files</span>
       </button>
     </nav>
   </div>

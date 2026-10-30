@@ -2,7 +2,7 @@
 
 An Android hotspot controller and LSPosed module for rooted phones. Share the
 phone's mobile connection and manage Wi-Fi, clients, SMS, and shared storage
-from a browser. The app and web interface are currently in Chinese.
+from a browser. The app and web interface are in English.
 
 [中文说明](docs/README.zh-CN.md) · [Releases](https://github.com/wfgzsdq/phone-router/releases)
 
@@ -31,8 +31,8 @@ Claude and GPT.
 - Android 10+; root with `su` support for switching to system UID 1000.
 - LSPosed for the fixed-IP feature. Android internals and OEM restrictions vary;
   the minimum SDK is not a guarantee that every feature works on every ROM.
-- Install the signed APK from Releases and grant root to **热点控制**.
-- In **LSPosed → Modules → 热点控制**, enable the module and select **System
+- Install the signed APK from Releases and grant root to **Hotspot Control**.
+- In **LSPosed → Modules → Hotspot Control**, enable the module and select **System
   Framework (`android`)** plus the installed recommended Tethering packages:
   - `com.android.networkstack.tethering.inprocess`
   - `com.android.networkstack.tethering`

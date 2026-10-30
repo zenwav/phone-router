@@ -32,8 +32,8 @@ async function login() {
     });
     const j = await res.json();
     if (j.ok && j.token) { TOKEN = j.token; localStorage.setItem("pr_token", TOKEN); showApp(); }
-    else $("loginErr").textContent = j.error || "登录失败";
-  } catch (e) { $("loginErr").textContent = "网络错误"; }
+    else $("loginErr").textContent = j.error || "Login failed";
+  } catch (e) { $("loginErr").textContent = "Network error"; }
 }
 
 function logout() {
@@ -60,7 +60,7 @@ function switchTab(name) {
 }
 
 // ---- desktop side navigation (hamburger) -----------------------------------
-// Default is fully expanded ("完整显示"); the hamburger lets the user collapse
+// Default is fully expanded ("fully expanded"); the hamburger lets the user collapse
 // it to an icon-only rail, remembered across visits. Phones always use the
 // bottom tab bar instead (see the @media breakpoint in style.css).
 
@@ -137,9 +137,9 @@ async function loadStatus() {
   try {
     const s = await api("/api/status");
     const active = !!s.active;
-    $("statePill").textContent = active ? "运行中" : "已关闭";
+    $("statePill").textContent = active ? "Running" : "Off";
     $("statePill").className = "pill " + (active ? "on" : "off");
-    $("sState").textContent = active ? "已开启" : "已关闭";
+    $("sState").textContent = active ? "On" : "Off";
     $("sClients").textContent = s.clientCount ?? 0;
     $("sUptime").textContent = fmtDuration(s.uptimeSeconds);
     // wlan1 tx = clients download, wlan1 rx = clients upload
@@ -150,7 +150,7 @@ async function loadStatus() {
   } catch (e) {}
   try {
     const d = await api("/api/data-usage");
-    $("sRemain").textContent = d.remainingBytes >= 0 ? fmtBytes(d.remainingBytes) : "未设置";
+    $("sRemain").textContent = d.remainingBytes >= 0 ? fmtBytes(d.remainingBytes) : "Not set";
   } catch (e) {}
 }
 
@@ -158,7 +158,7 @@ async function loadClients() {
   try {
     const j = await api("/api/clients");
     const list = j.clients || [], el = $("clients");
-    if (!list.length) { el.innerHTML = '<div class="muted">暂无设备</div>'; return; }
+    if (!list.length) { el.innerHTML = '<div class="muted">No devices</div>'; return; }
     el.innerHTML = "";
     for (const c of list) {
       const name = c.hostname && c.hostname.length ? c.hostname : (c.ip || c.mac);
@@ -169,7 +169,7 @@ async function loadClients() {
         <div class="grow"><div class="t1">${escapeHtml(name)}</div><div class="t2">${escapeHtml(sub)}</div></div>`;
       const btn = document.createElement("button");
       btn.className = "iconbtn " + (c.blocked ? "" : "danger");
-      btn.textContent = c.blocked ? "解除" : "拉黑";
+      btn.textContent = c.blocked ? "Unblock" : "Block";
       btn.onclick = () => blockClient(c.mac, !c.blocked);
       row.appendChild(btn);
       el.appendChild(row);
@@ -178,23 +178,23 @@ async function loadClients() {
 }
 
 async function blockClient(mac, block) {
-  toast(block ? "拉黑中…" : "解除中…");
-  try { const r = await api("/api/clients/block", "POST", { mac, block }); toast(r.ok ? "已更新" : "失败"); setTimeout(loadClients, 1200); }
-  catch (e) { toast("操作失败"); }
+  toast(block ? "Blocking…" : "Unblocking…");
+  try { const r = await api("/api/clients/block", "POST", { mac, block }); toast(r.ok ? "Updated" : "Failed"); setTimeout(loadClients, 1200); }
+  catch (e) { toast("Operation failed"); }
 }
 
 async function toggleHotspot(on) {
   const sw = $("hotspotSw"); sw.dataset.busy = "1"; sw.disabled = true;
-  toast(on ? "正在开启热点…" : "正在关闭热点…");
-  try { const r = await api("/api/hotspot", "POST", { enabled: on }); toast(r.ok ? (on ? "热点已开启" : "热点已关闭") : "操作失败"); }
-  catch (e) { toast("操作失败"); }
+  toast(on ? "Turning hotspot on…" : "Turning hotspot off…");
+  try { const r = await api("/api/hotspot", "POST", { enabled: on }); toast(r.ok ? (on ? "Hotspot turned on" : "Hotspot turned off") : "Operation failed"); }
+  catch (e) { toast("Operation failed"); }
   finally { sw.disabled = false; sw.dataset.busy = "0"; setTimeout(loadStatus, 800); }
 }
 
 async function rebootHotspot() {
-  const b = $("rebootBtn"); b.disabled = true; toast("重启热点中…");
-  try { const r = await api("/api/reboot-hotspot", "POST", {}); toast(r.ok ? "热点已重启" : "失败"); }
-  catch (e) { toast("失败"); } finally { b.disabled = false; setTimeout(loadStatus, 1500); }
+  const b = $("rebootBtn"); b.disabled = true; toast("Restarting hotspot…");
+  try { const r = await api("/api/reboot-hotspot", "POST", {}); toast(r.ok ? "Hotspot restarted" : "Failed"); }
+  catch (e) { toast("Failed"); } finally { b.disabled = false; setTimeout(loadStatus, 1500); }
 }
 
 // ---- wifi ------------------------------------------------------------------
@@ -219,14 +219,14 @@ function renderQr(c) {
   qr = new QRCode(box, { text: wifi, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
 }
 async function saveConfig() {
-  const b = $("saveCfgBtn"); b.disabled = true; b.textContent = "应用中…";
+  const b = $("saveCfgBtn"); b.disabled = true; b.textContent = "Applying…";
   const body = {
     ssid: $("ssid").value, passphrase: $("passphrase").value,
     security: Number($("security").value), band: Number($("band").value),
     hidden: $("hidden").value === "true", maxClients: Number($("maxClients").value) || 0,
   };
-  try { const r = await api("/api/config", "POST", body); toast(r.ok ? "已保存并应用" : ("失败: " + (r.error || ""))); await loadConfig(); setTimeout(loadStatus, 1500); }
-  catch (e) { toast("保存失败"); } finally { b.disabled = false; b.textContent = "保存并应用"; }
+  try { const r = await api("/api/config", "POST", body); toast(r.ok ? "Saved and applied" : ("Failed: " + (r.error || ""))); await loadConfig(); setTimeout(loadStatus, 1500); }
+  catch (e) { toast("Save failed"); } finally { b.disabled = false; b.textContent = "Save and apply"; }
 }
 
 // ---- data balance ----------------------------------------------------------
@@ -235,7 +235,7 @@ async function loadDataUsage() {
   try {
     const d = await api("/api/data-usage");
     $("dUsed").textContent = fmtBytes(d.usedBytes >= 0 ? d.usedBytes : 0);
-    $("dRemain").textContent = d.remainingBytes >= 0 ? fmtBytes(d.remainingBytes) : "未设置";
+    $("dRemain").textContent = d.remainingBytes >= 0 ? fmtBytes(d.remainingBytes) : "Not set";
     $("quotaGb").value = d.quotaMb ? (d.quotaMb / 1024).toString() : "";
     $("resetDay").value = d.resetDay || 1;
     const fill = $("dBarFill");
@@ -244,22 +244,22 @@ async function loadDataUsage() {
       fill.style.width = pct + "%";
       fill.className = "bar-fill" + (pct > 90 ? " danger" : pct > 70 ? " warn" : "");
     } else { fill.style.width = "0%"; }
-    const upd = d.updatedAt ? ("更新于 " + fmtDate(d.updatedAt)) : "尚未刷新";
-    const cyc = d.cycleStart ? ("本周期自 " + fmtDate(d.cycleStart)) : "";
+    const upd = d.updatedAt ? ("Updated " + fmtDate(d.updatedAt)) : "Not refreshed yet";
+    const cyc = d.cycleStart ? ("Cycle started " + fmtDate(d.cycleStart)) : "";
     $("dMeta").textContent = [cyc, upd].filter(Boolean).join(" · ");
   } catch (e) {}
 }
 async function savePlan() {
   const quotaMb = Math.round((parseFloat($("quotaGb").value) || 0) * 1024);
   const resetDay = parseInt($("resetDay").value) || 1;
-  toast("保存中…");
-  try { await api("/api/data-usage/config", "POST", { quotaMb, resetDay }); toast("已保存"); loadDataUsage(); loadStatus(); }
-  catch (e) { toast("失败"); }
+  toast("Saving…");
+  try { await api("/api/data-usage/config", "POST", { quotaMb, resetDay }); toast("Saved"); loadDataUsage(); loadStatus(); }
+  catch (e) { toast("Failed"); }
 }
 async function refreshUsage() {
-  toast("刷新中…");
-  try { await api("/api/data-usage/refresh", "POST", {}); toast("已刷新"); loadDataUsage(); loadStatus(); }
-  catch (e) { toast("失败"); }
+  toast("Refreshing…");
+  try { await api("/api/data-usage/refresh", "POST", {}); toast("Refreshed"); loadDataUsage(); loadStatus(); }
+  catch (e) { toast("Failed"); }
 }
 
 // ---- speed limit -----------------------------------------------------------
@@ -273,30 +273,30 @@ async function loadSpeed() {
 async function saveSpeed() {
   const downKbps = Math.round((parseFloat($("downMbps").value) || 0) * 1000);
   const upKbps = Math.round((parseFloat($("upMbps").value) || 0) * 1000);
-  toast("应用中…");
-  try { const r = await api("/api/speed-limit", "POST", { downKbps, upKbps }); toast(r.ok ? "已应用" : "失败"); }
-  catch (e) { toast("失败"); }
+  toast("Applying…");
+  try { const r = await api("/api/speed-limit", "POST", { downKbps, upKbps }); toast(r.ok ? "Applied" : "Failed"); }
+  catch (e) { toast("Failed"); }
 }
 
 // ---- schedules -------------------------------------------------------------
 
-const DAYS = ["一", "二", "三", "四", "五", "六", "日"];
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 async function loadSchedules() {
   try {
     const j = await api("/api/schedules"); const list = j.schedules || [], el = $("schedList");
-    if (!list.length) { el.innerHTML = '<div class="muted">暂无定时任务</div>'; return; }
+    if (!list.length) { el.innerHTML = '<div class="muted">No schedules</div>'; return; }
     el.innerHTML = "";
     for (const s of list) {
       const t = String(s.hour).padStart(2, "0") + ":" + String(s.minute).padStart(2, "0");
-      const days = (s.days && s.days.length) ? s.days.map((d) => "周" + DAYS[d - 1]).join(" ") : "每天";
-      const act = s.action === "on" ? "开启热点" : "关闭热点";
+      const days = (s.days && s.days.length) ? s.days.map((d) => DAYS[d - 1]).join(" ") : "Every day";
+      const act = s.action === "on" ? "Turn hotspot on" : "Turn hotspot off";
       const row = document.createElement("div");
       row.className = "row-item";
       row.innerHTML = `<div class="grow"><div class="t1">${t} · ${act}</div><div class="t2">${days}</div></div>`;
       const sw = document.createElement("label"); sw.className = "switch";
       sw.innerHTML = `<input type="checkbox" ${s.enabled ? "checked" : ""}/><span class="slider"></span>`;
       sw.querySelector("input").onchange = (e) => api("/api/schedules/toggle", "POST", { id: s.id, enabled: e.target.checked });
-      const del = document.createElement("button"); del.className = "iconbtn danger"; del.textContent = "删除";
+      const del = document.createElement("button"); del.className = "iconbtn danger"; del.textContent = "Delete";
       del.onclick = async () => { await api("/api/schedules/delete", "POST", { id: s.id }); loadSchedules(); };
       row.appendChild(sw); row.appendChild(del); el.appendChild(row);
     }
@@ -307,15 +307,15 @@ function openSchedModal() {
   const sel = new Set();
   const bg = document.createElement("div"); bg.className = "modal-bg";
   bg.innerHTML = `<div class="modal">
-    <h3>添加定时任务</h3>
+    <h3>Add schedule</h3>
     <div class="row2">
-      <label class="field"><span class="cap">时间</span><input id="mTime" type="time" value="08:00"/></label>
-      <label class="field"><span class="cap">动作</span>
-        <select id="mAct"><option value="on">开启热点</option><option value="off">关闭热点</option></select></label>
+      <label class="field"><span class="cap">Time</span><input id="mTime" type="time" value="08:00"/></label>
+      <label class="field"><span class="cap">Action</span>
+        <select id="mAct"><option value="on">Turn hotspot on</option><option value="off">Turn hotspot off</option></select></label>
     </div>
-    <span class="cap">重复 (不选=每天)</span>
+    <span class="cap">Repeat (none = every day)</span>
     <div class="days" id="mDays"></div>
-    <div class="row2"><button class="btn secondary" id="mCancel">取消</button><button class="btn" id="mOk">保存</button></div>
+    <div class="row2"><button class="btn secondary" id="mCancel">Cancel</button><button class="btn" id="mOk">Save</button></div>
   </div>`;
   document.body.appendChild(bg);
   const daysEl = bg.querySelector("#mDays");
@@ -339,10 +339,10 @@ async function loadSubs() {
   try {
     const j = await api("/api/sms/subs"); const subs = j.subs || [], sel = $("smsSub");
     sel.innerHTML = "";
-    if (!subs.length) { sel.innerHTML = '<option value="0">默认 SIM</option>'; return; }
+    if (!subs.length) { sel.innerHTML = '<option value="0">Default SIM</option>'; return; }
     for (const s of subs) {
       const o = document.createElement("option"); o.value = s.subId;
-      o.textContent = `卡${s.slot + 1} ${s.name}` + (s.number ? ` (${s.number})` : "");
+      o.textContent = `SIM ${s.slot + 1} ${s.name}` + (s.number ? ` (${s.number})` : "");
       sel.appendChild(o);
     }
   } catch (e) {}
@@ -376,7 +376,7 @@ async function loadSms() {
       if (t) renderMessages(t);
     }
   } catch (e) {
-    $("smsThreads").innerHTML = '<div class="muted" style="padding:16px">读取失败</div>';
+    $("smsThreads").innerHTML = '<div class="muted" style="padding:16px">Failed to load</div>';
   }
 }
 
@@ -410,7 +410,7 @@ if (!smsPreviewObserver) {
 function renderThreadList() {
   const el = $("smsThreads");
   if (smsPreviewObserver) smsPreviewObserver.disconnect();
-  if (!smsThreadsData.length) { el.innerHTML = '<div class="muted" style="padding:16px">暂无短信</div>'; return; }
+  if (!smsThreadsData.length) { el.innerHTML = '<div class="muted" style="padding:16px">No messages</div>'; return; }
   el.innerHTML = "";
   for (const t of smsThreadsData) {
     const last = lastMsg(t);
@@ -420,7 +420,7 @@ function renderThreadList() {
       <span class="avatar"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
       <span class="meta">
         <span class="addr">${escapeHtml(t.address)}</span>
-        <span class="snippet">${last.dir === "out" ? "我: " : ""}${escapeHtml(last.body)}</span>
+        <span class="snippet">${last.dir === "out" ? "Me: " : ""}${escapeHtml(last.body)}</span>
       </span>
       <span class="time">${fmtDate(last.date)}</span>`;
     row.onclick = () => openThread(t.address);
@@ -434,7 +434,7 @@ function renderThreadList() {
 
 function renderMessages(t) {
   $("smsPeerName").textContent = t.address;
-  $("smsPeerSub").textContent = `${t.messages.length} 条消息`;
+  $("smsPeerSub").textContent = `${t.messages.length} messages`;
   const el = $("smsMessages");
   el.innerHTML = "";
   for (const m of t.messages) {
@@ -459,9 +459,9 @@ function openThread(address) {
 
 function openNewMessage() {
   currentPeer = null;
-  $("smsPeerName").textContent = "新短信";
+  $("smsPeerName").textContent = "New message";
   $("smsPeerSub").textContent = "";
-  $("smsMessages").innerHTML = '<div class="sms-empty">输入号码和内容，发送后将创建新会话</div>';
+  $("smsMessages").innerHTML = '<div class="sms-empty">Enter a number and message; a new conversation will be created after sending</div>';
   $("smsTo").value = "";
   $("smsToRow").classList.remove("hidden");
   $("smsShell").classList.add("show-thread");
@@ -477,35 +477,35 @@ async function sendSms() {
   const b = $("smsSendBtn"); b.disabled = true;
   const to = $("smsTo").value.trim();
   const body = $("smsBody").value;
-  if (!to || !body.trim()) { toast("请填写号码和内容"); b.disabled = false; return; }
-  toast("发送中…");
+  if (!to || !body.trim()) { toast("Enter a number and message"); b.disabled = false; return; }
+  toast("Sending…");
   try {
     const r = await api("/api/sms/send", "POST", { subId: Number($("smsSub").value) || 0, to, body });
     if (r.ok) {
-      toast("已发送");
+      toast("Sent");
       $("smsBody").value = "";
       currentPeer = to;
       $("smsToRow").classList.add("hidden");
       setTimeout(loadSms, 700);
     } else {
-      toast("失败: " + (r.error || ""));
+      toast("Failed: " + (r.error || ""));
     }
-  } catch (e) { toast("发送失败"); }
+  } catch (e) { toast("Send failed"); }
   finally { b.disabled = false; }
 }
 
 // ---- files -----------------------------------------------------------------
 
 async function loadFiles(path) {
-  const el = $("fList"); el.innerHTML = '<div class="muted">加载中…</div>';
+  const el = $("fList"); el.innerHTML = '<div class="muted">Loading…</div>';
   try {
     const j = await api("/api/files?path=" + encodeURIComponent(path || "/"));
-    if (!j.ok) { el.innerHTML = '<div class="muted">' + (j.error || "读取失败") + "</div>"; return; }
+    if (!j.ok) { el.innerHTML = '<div class="muted">' + (j.error || "Failed to load") + "</div>"; return; }
     curPath = j.path || "/"; $("fPath").textContent = curPath;
     el.innerHTML = "";
     if (curPath !== "/") {
       const up = document.createElement("div"); up.className = "row-item";
-      up.innerHTML = `<div class="grow"><div class="t1 fname dir">⬆ 上级目录</div></div>`;
+      up.innerHTML = `<div class="grow"><div class="t1 fname dir">⬆ Parent directory</div></div>`;
       up.querySelector(".t1").onclick = () => loadFiles(parentPath(curPath));
       el.appendChild(up);
     }
@@ -516,23 +516,23 @@ async function loadFiles(path) {
       row.innerHTML = `<div class="grow"><div class="t1 fname ${f.dir ? "dir" : ""}">${icon} ${escapeHtml(f.name)}</div><div class="t2">${meta}</div></div>`;
       const full = (curPath === "/" ? "" : curPath) + "/" + f.name;
       row.querySelector(".t1").onclick = () => { if (f.dir) loadFiles(full); else window.open("/api/files/download?token=" + TOKEN + "&path=" + encodeURIComponent(full), "_blank"); };
-      const ren = document.createElement("button"); ren.className = "iconbtn"; ren.textContent = "改名";
-      ren.onclick = async () => { const nn = prompt("新名称", f.name); if (nn && nn !== f.name) { await api("/api/files/rename", "POST", { path: full, newName: nn }); loadFiles(curPath); } };
-      const del = document.createElement("button"); del.className = "iconbtn danger"; del.textContent = "删除";
-      del.onclick = async () => { if (confirm("删除 " + f.name + " ?")) { await api("/api/files/delete", "POST", { path: full }); loadFiles(curPath); } };
+      const ren = document.createElement("button"); ren.className = "iconbtn"; ren.textContent = "Rename";
+      ren.onclick = async () => { const nn = prompt("New name", f.name); if (nn && nn !== f.name) { await api("/api/files/rename", "POST", { path: full, newName: nn }); loadFiles(curPath); } };
+      const del = document.createElement("button"); del.className = "iconbtn danger"; del.textContent = "Delete";
+      del.onclick = async () => { if (confirm("Delete " + f.name + " ?")) { await api("/api/files/delete", "POST", { path: full }); loadFiles(curPath); } };
       row.appendChild(ren); row.appendChild(del); el.appendChild(row);
     }
-  } catch (e) { el.innerHTML = '<div class="muted">读取失败</div>'; }
+  } catch (e) { el.innerHTML = '<div class="muted">Failed to load</div>'; }
 }
 function parentPath(p) { if (p === "/" || p === "") return "/"; const i = p.replace(/\/$/, "").lastIndexOf("/"); return i <= 0 ? "/" : p.substring(0, i); }
 
 async function uploadFile(file) {
   const fd = new FormData(); fd.append("path", curPath); fd.append("file", file);
-  toast("上传中…");
+  toast("Uploading…");
   try {
     const res = await fetch("/api/files/upload", { method: "POST", headers: { "X-Auth": TOKEN }, body: fd });
-    const j = await res.json(); toast(j.ok ? "上传成功" : ("失败: " + (j.error || ""))); loadFiles(curPath);
-  } catch (e) { toast("上传失败"); }
+    const j = await res.json(); toast(j.ok ? "Uploaded" : ("Failed: " + (j.error || ""))); loadFiles(curPath);
+  } catch (e) { toast("Upload failed"); }
 }
 
 // ---- wire up ---------------------------------------------------------------
@@ -561,7 +561,7 @@ $("smsBody").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendSms(); }
 });
 
-$("fMkdir").onclick = async () => { const n = prompt("文件夹名称"); if (n) { await api("/api/files/mkdir", "POST", { path: curPath, name: n }); loadFiles(curPath); } };
+$("fMkdir").onclick = async () => { const n = prompt("Folder name"); if (n) { await api("/api/files/mkdir", "POST", { path: curPath, name: n }); loadFiles(curPath); } };
 $("fUpload").onclick = () => $("fFile").click();
 $("fFile").onchange = (e) => { if (e.target.files[0]) uploadFile(e.target.files[0]); e.target.value = ""; };
 

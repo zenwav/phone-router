@@ -24,7 +24,7 @@ object KsuModule {
             "version=1.0",
             "versionCode=1",
             "author=phone-router",
-            "description=开机自动拉起热点管理服务",
+            "description=Starts the hotspot management service automatically at boot",
             "PROP",
             "cat > $DIR/service.sh <<'SH'",
             "#!/system/bin/sh",

@@ -1,7 +1,43 @@
 <resources>
-    <string name="app_name">热点控制</string>
-    <string name="notif_channel_name">热点服务</string>
-    <string name="notif_title">热点管理服务运行中</string>
-    <string name="xposed_description">基于 SoftApHelper，在系统分配 Wi-Fi 热点地址时固定为 192.168.43.1/24</string>
-    <string name="fixed_ip_instructions">固定网关：192.168.43.1（LSPosed）\n请在 LSPosed 中启用“热点控制”，勾选系统框架及本机 Tethering 推荐作用域，然后重启手机。固定 IP 随模块启用，不再由 App 开关控制。</string>
+    <string name="app_name">Hotspot Control</string>
+    <string name="notif_channel_name">Hotspot service</string>
+    <string name="notif_title">Hotspot management service is running</string>
+    <string name="xposed_description">Based on SoftApHelper, fixes the Wi-Fi hotspot address assigned by the system at 192.168.43.1/24</string>
+    <string name="fixed_ip_instructions">Fixed gateway: 192.168.43.1 (LSPosed)\nEnable \"Hotspot Control\" in LSPosed, select System Framework and the recommended Tethering scopes for this device, then reboot. The fixed IP is provided by the module and is no longer controlled by the app switch.</string>
+
+    <string name="root_checking">Root: checking…</string>
+    <string name="root_granted">Root: granted (KernelSU)</string>
+    <string name="root_unavailable">Root: unavailable — grant access in the manager</string>
+    <string name="hotspot_status_dash">Hotspot status: —</string>
+    <string name="hotspot_status_format">Hotspot status: %1$s</string>
+    <string name="hotspot_status_with_ssid">Hotspot status: %1$s   SSID: %2$s</string>
+    <string name="hotspot_on">On</string>
+    <string name="hotspot_off">Off</string>
+    <string name="management_address_dash">Management address: —</string>
+    <string name="management_address_format">Management address: http://%1$s:%2$d</string>
+    <string name="hotspot_switch">Hotspot</string>
+    <string name="autostart_switch">Start hotspot on boot</string>
+
+    <string name="web_settings_title">Web management settings</string>
+    <string name="web_port_hint">Web port</string>
+    <string name="web_password_hint">Web access password</string>
+    <string name="save_restart_web">Save and restart web service</string>
+    <string name="open_web">Open web management</string>
+    <string name="install_ksu">Install boot module (KernelSU)</string>
+    <string name="refresh_status">Refresh status</string>
+
+    <string name="switching_hotspot">Switching hotspot…</string>
+    <string name="refreshing">Refreshing…</string>
+    <string name="port_range_error">Port must be between 1024 and 65535</string>
+    <string name="password_too_short">Password must be at least 8 characters</string>
+    <string name="saved_restarting_web">Saved. Restarting web service…</string>
+    <string name="browser_unavailable">Unable to open a browser</string>
+    <string name="installing_boot_module">Installing boot module…</string>
+    <string name="boot_module_installed">Boot module installed. It takes effect after reboot.</string>
+    <string name="boot_module_failed">Installation failed. Make sure KernelSU has granted root.</string>
+
+    <string name="service_starting">Starting…</string>
+    <string name="no_root_features_unavailable">No root access; features unavailable</string>
+    <string name="web_not_started">Web server not started</string>
+    <string name="status_management_address">Management address %1$s</string>
 </resources>

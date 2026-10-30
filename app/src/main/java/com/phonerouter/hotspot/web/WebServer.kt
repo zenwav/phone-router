@@ -70,7 +70,7 @@ class WebServer(
             if (record != null && now < record.lockedUntilMs) {
                 return json(
                     Response.Status.FORBIDDEN,
-                    JSONObject().put("ok", false).put("error", "尝试次数过多，请稍后再试")
+                    JSONObject().put("ok", false).put("error", "Too many attempts. Please try again later.")
                 )
             }
             val pw = readJson(session).optString("password")
@@ -80,12 +80,12 @@ class WebServer(
                 json(Response.Status.OK, JSONObject().put("ok", true).put("token", token))
             } else {
                 recordFailure(remoteIp, now)
-                json(Response.Status.FORBIDDEN, JSONObject().put("ok", false).put("error", "密码错误"))
+                json(Response.Status.FORBIDDEN, JSONObject().put("ok", false).put("error", "Incorrect password"))
             }
         }
 
         if (!authorized(session)) {
-            return json(Response.Status.UNAUTHORIZED, JSONObject().put("ok", false).put("error", "未授权"))
+            return json(Response.Status.UNAUTHORIZED, JSONObject().put("ok", false).put("error", "Unauthorized"))
         }
 
         val get = session.method == Method.GET

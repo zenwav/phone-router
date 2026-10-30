@@ -39,7 +39,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.swHotspot.setOnCheckedChangeListener { _, checked ->
             if (suppressEvents) return@setOnCheckedChangeListener
-            setBusy("正在切换热点…")
+            setBusy(getString(R.string.switching_hotspot))
             io.execute {
                 manager.setHotspot(checked)
                 runOnUiThread { refresh() }
@@ -58,7 +58,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        setBusy("刷新中…")
+        setBusy(getString(R.string.refreshing))
         io.execute {
             val rooted = manager.hasRoot()
             if (rooted) manager.init()
@@ -67,10 +67,16 @@ class MainActivity : AppCompatActivity() {
             val port = manager.prefs.webPort
             runOnUiThread {
                 suppressEvents = true
-                binding.tvRoot.text = if (rooted) "Root: 已获取 (KernelSU)" else "Root: 不可用 — 请在管理器中授权"
-                binding.tvStatus.text = "热点状态: ${if (active) "已开启" else "已关闭"}" +
-                    (if (ssid != null) "   SSID: $ssid" else "")
-                binding.tvWeb.text = "管理地址: http://${Prefs.GATEWAY}:$port"
+                binding.tvRoot.text = getString(
+                    if (rooted) R.string.root_granted else R.string.root_unavailable
+                )
+                val state = getString(if (active) R.string.hotspot_on else R.string.hotspot_off)
+                binding.tvStatus.text = if (ssid != null) {
+                    getString(R.string.hotspot_status_with_ssid, state, ssid)
+                } else {
+                    getString(R.string.hotspot_status_format, state)
+                }
+                binding.tvWeb.text = getString(R.string.management_address_format, Prefs.GATEWAY, port)
                 binding.swHotspot.isChecked = active
                 binding.btnInstallKsu.isEnabled = rooted
                 suppressEvents = false
@@ -85,12 +91,12 @@ class MainActivity : AppCompatActivity() {
     private fun saveWeb() {
         val port = binding.etPort.text.toString().toIntOrNull()
         if (port == null || port !in 1024..65535) {
-            toast("端口需在 1024-65535 之间")
+            toast(getString(R.string.port_range_error))
             return
         }
         val newPw = binding.etPassword.text.toString().trim()
         if (newPw.length < 8) {
-            toast("密码长度至少需 8 位")
+            toast(getString(R.string.password_too_short))
             return
         }
         manager.prefs.webPort = port
@@ -98,7 +104,7 @@ class MainActivity : AppCompatActivity() {
         // Recreate the service so the web server rebinds with the new settings.
         stopService(Intent(this, HotspotService::class.java))
         HotspotService.start(this, autoStart = false)
-        toast("已保存，Web 服务重启中")
+        toast(getString(R.string.saved_restarting_web))
         binding.tvWeb.postDelayed({ refresh() }, 1500)
     }
 
@@ -107,16 +113,16 @@ class MainActivity : AppCompatActivity() {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (t: Throwable) {
-            toast("无法打开浏览器")
+            toast(getString(R.string.browser_unavailable))
         }
     }
 
     private fun installKsu() {
-        setBusy("安装开机模块中…")
+        setBusy(getString(R.string.installing_boot_module))
         io.execute {
             val ok = KsuModule.install()
             runOnUiThread {
-                toast(if (ok) "开机自启模块已安装，重启后生效" else "安装失败，请确认 KernelSU 已授权")
+                toast(getString(if (ok) R.string.boot_module_installed else R.string.boot_module_failed))
                 refresh()
             }
         }

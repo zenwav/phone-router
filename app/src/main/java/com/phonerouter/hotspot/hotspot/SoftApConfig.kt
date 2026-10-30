@@ -9,11 +9,11 @@ object SecurityType {
     const val WPA3_SAE_TRANSITION = 2
     const val WPA3_SAE = 3
     fun label(v: Int) = when (v) {
-        OPEN -> "开放"
+        OPEN -> "Open"
         WPA2_PSK -> "WPA2"
         WPA3_SAE_TRANSITION -> "WPA2/WPA3"
         WPA3_SAE -> "WPA3"
-        else -> "未知"
+        else -> "Unknown"
     }
 }
 
@@ -25,7 +25,7 @@ object Band {
         GHZ_2 -> "2.4G"
         GHZ_5 -> "5G"
         GHZ_6 -> "6G"
-        else -> "自动"
+        else -> "Auto"
     }
 }
 

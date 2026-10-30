@@ -30,7 +30,7 @@ class HotspotService : Service() {
     override fun onCreate() {
         super.onCreate()
         manager = HotspotManager(this)
-        startForegroundSafe("正在启动…")
+        startForegroundSafe(getString(R.string.service_starting))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -75,10 +75,14 @@ class HotspotService : Service() {
     }
 
     private fun statusLine(rooted: Boolean): String {
-        if (!rooted) return "无 Root 权限，功能不可用"
+        if (!rooted) return getString(R.string.no_root_features_unavailable)
         val port = manager.prefs.webPort
-        val web = if (webServer != null) "http://${Prefs.GATEWAY}:$port" else "Web 未启动"
-        return "管理地址 $web"
+        val web = if (webServer != null) {
+            "http://${Prefs.GATEWAY}:$port"
+        } else {
+            getString(R.string.web_not_started)
+        }
+        return getString(R.string.status_management_address, web)
     }
 
     private fun startForegroundSafe(text: String) {
