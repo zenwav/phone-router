@@ -16,7 +16,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Privileged helper run via:  su 1000 -c "CLASSPATH=/data/local/tmp/shim.jar app_process /system/bin com.phonerouter.shim.Main <cmd> [k=v ...]"
+ * Privileged helper run via:  su 1000 -c "CLASSPATH=/data/system/phonerouter_shim.jar app_process /system/bin com.phonerouter.shim.Main <cmd> [k=v ...]"
  *
  * Runs as the system uid (1000) so hidden/@SystemApi framework APIs and the
  * TETHER_PRIVILEGED / NETWORK_SETTINGS permissions are available. Everything is
@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
  *   tether-stop                             -> stop WiFi tethering
  *   block-client mac=AA:BB:CC:DD:EE:FF
  *   unblock-client mac=AA:BB:CC:DD:EE:FF
+ *   data-usage start=.. end=..
  *
  * Output: a single JSON object on stdout. Process exit code 0 on success, 1 on error.
  */
@@ -73,12 +74,6 @@ public final class Main {
                 case "data-usage":
                     dataUsage(ctx, kv);
                     break;
-                case "send-sms":
-                    sendSms(ctx, kv);
-                    break;
-                case "isms-info":
-                    ismsInfo();
-                    break;
                 default:
                     fail("unknown command: " + cmd);
             }
@@ -114,7 +109,7 @@ public final class Main {
         if (!start) {
             Method stop = findMethod(tm.getClass(), "stopTethering", 1);
             stop.invoke(tm, TETHERING_WIFI);
-            ok("{\"ok\":true,\"action\":\"stop\"}");
+            ok("{"ok":true,"action":"stop"}");
             return;
         }
 
@@ -157,7 +152,7 @@ public final class Main {
 
         latch.await(20, TimeUnit.SECONDS);
         if (started[0]) {
-            ok("{\"ok\":true,\"action\":\"start\"}");
+            ok("{"ok":true,"action":"start"}");
         } else {
             fail("tethering failed, code=" + errCode[0]);
         }
@@ -174,14 +169,14 @@ public final class Main {
         Object cfg = currentConfig(wm);
         StringBuilder sb = new StringBuilder();
         sb.append('{');
-        sb.append("\"ok\":true");
-        sb.append(",\"ssid\":").append(jstr(readSsid(cfg)));
-        sb.append(",\"passphrase\":").append(jstr(readString(cfg, "getPassphrase")));
-        sb.append(",\"security\":").append(readInt(cfg, "getSecurityType", 1));
-        sb.append(",\"band\":").append(readInt(cfg, "getBand", 1));
-        sb.append(",\"hidden\":").append(readBool(cfg, "isHiddenSsid"));
-        sb.append(",\"maxClients\":").append(readInt(cfg, "getMaxNumberOfClients", 0));
-        sb.append(",\"blocked\":[");
+        sb.append(""ok":true");
+        sb.append(","ssid":").append(jstr(readSsid(cfg)));
+        sb.append(","passphrase":").append(jstr(readString(cfg, "getPassphrase")));
+        sb.append(","security":").append(readInt(cfg, "getSecurityType", 1));
+        sb.append(","band":").append(readInt(cfg, "getBand", 1));
+        sb.append(","hidden":").append(readBool(cfg, "isHiddenSsid"));
+        sb.append(","maxClients":").append(readInt(cfg, "getMaxNumberOfClients", 0));
+        sb.append(","blocked":[");
         List<String> blocked = readBlocked(cfg);
         for (int i = 0; i < blocked.size(); i++) {
             if (i > 0) sb.append(',');
@@ -227,11 +222,14 @@ public final class Main {
         Object cfg = builder.getClass().getMethod("build").invoke(builder);
         boolean r = (Boolean) wm.getClass().getMethod("setSoftApConfiguration",
                 Class.forName("android.net.wifi.SoftApConfiguration")).invoke(wm, cfg);
-        ok("{\"ok\":" + r + "}");
+        ok("{"ok":" + r + "}");
     }
 
     private static void blockClient(Context ctx, String mac, boolean block) throws Exception {
-        if (mac == null) { fail("mac required"); return; }
+        if (mac == null || !mac.matches("^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}$")) {
+            fail("valid mac required");
+            return;
+        }
         Object wm = wifiManager(ctx);
         Object current = currentConfig(wm);
         Object builder = newBuilderFrom(current);
@@ -254,7 +252,7 @@ public final class Main {
         Object cfg = builder.getClass().getMethod("build").invoke(builder);
         boolean r = (Boolean) wm.getClass().getMethod("setSoftApConfiguration",
                 Class.forName("android.net.wifi.SoftApConfiguration")).invoke(wm, cfg);
-        ok("{\"ok\":" + r + ",\"mac\":" + jstr(mac) + ",\"blocked\":" + block + "}");
+        ok("{"ok":" + r + ","mac":" + jstr(mac) + ","blocked":" + block + "}");
     }
 
     // ---- mobile data usage (NetworkStatsManager, system uid) -----------------
@@ -275,104 +273,12 @@ public final class Main {
         Object bucket = q.invoke(nsm, 0, null, start, end);
         long rx = (Long) bucket.getClass().getMethod("getRxBytes").invoke(bucket);
         long tx = (Long) bucket.getClass().getMethod("getTxBytes").invoke(bucket);
-        ok("{\"ok\":true,\"rxBytes\":" + rx + ",\"txBytes\":" + tx + ",\"totalBytes\":" + (rx + tx) + "}");
+        ok("{"ok":true,"rxBytes":" + rx + ","txBytes":" + tx + ","totalBytes":" + (rx + tx) + "}");
     }
 
     private static long parseLong(String s, long dflt) {
         if (s == null) return dflt;
         try { return Long.parseLong(s.trim()); } catch (Throwable t) { return dflt; }
-    }
-
-    // ---- send SMS from the system uid (the device owner opted in) -------------
-
-    private static void sendSms(Context ctx, Map<String, String> kv) throws Exception {
-        int sub = (int) parseLong(kv.get("sub"), -1);
-        String to = decodeArg(kv, "to");
-        String body = decodeArg(kv, "body");
-        if (to == null || body == null) { fail("to/body required"); return; }
-        if (sub < 0) sub = defaultSmsSubId();
-
-        Object binder = Class.forName("android.os.ServiceManager")
-                .getMethod("getService", String.class).invoke(null, "isms");
-        if (binder == null) { fail("isms service unavailable"); return; }
-        Class<?> stub = Class.forName("com.android.internal.telephony.ISms$Stub");
-        Object iSms = stub.getMethod("asInterface", Class.forName("android.os.IBinder")).invoke(null, binder);
-
-        List<Method> candidates = new ArrayList<>();
-        for (Method m : iSms.getClass().getMethods()) {
-            if (m.getName().equals("sendTextForSubscriber")) candidates.add(m);
-        }
-        candidates.sort((a, b) -> b.getParameterTypes().length - a.getParameterTypes().length);
-        Throwable last = null;
-        for (Method m : candidates) {
-            try {
-                m.invoke(iSms, buildSendArgs(m.getParameterTypes(), sub, to, body));
-                ok("{\"ok\":true}");
-                return;
-            } catch (Throwable t) {
-                last = t;
-            }
-        }
-        fail(last != null ? rootCause(last) : "no sendTextForSubscriber overload");
-    }
-
-    /** Fills the sendTextForSubscriber argument array generically across versions. */
-    private static Object[] buildSendArgs(Class<?>[] p, int sub, String to, String body) {
-        List<Integer> strIdx = new ArrayList<>();
-        for (int i = 0; i < p.length; i++) if (p[i] == String.class) strIdx.add(i);
-        int n = strIdx.size();
-        int firstStr = n >= 1 ? strIdx.get(0) : -1;        // callingPackage
-        int destI = n >= 3 ? strIdx.get(n - 3) : -1;       // destination
-        int scI = n >= 2 ? strIdx.get(n - 2) : -1;         // service center
-        int textI = n >= 1 ? strIdx.get(n - 1) : -1;       // message text
-        Object[] a = new Object[p.length];
-        boolean firstInt = true;
-        for (int i = 0; i < p.length; i++) {
-            Class<?> t = p[i];
-            if (t == int.class) { a[i] = firstInt ? sub : 0; firstInt = false; }
-            else if (t == long.class) a[i] = 0L;
-            else if (t == boolean.class) a[i] = Boolean.TRUE;
-            else if (t == String.class) {
-                if (i == destI) a[i] = to;
-                else if (i == scI) a[i] = null;
-                else if (i == textI) a[i] = body;
-                else if (i == firstStr) a[i] = "android";            // calling package (uid 1000)
-                else a[i] = null;
-            } else a[i] = null;                                      // PendingIntent / other
-        }
-        return a;
-    }
-
-    /** Read-only: list the ISms send-text method signatures on this build. */
-    private static void ismsInfo() throws Exception {
-        Object binder = Class.forName("android.os.ServiceManager")
-                .getMethod("getService", String.class).invoke(null, "isms");
-        Class<?> stub = Class.forName("com.android.internal.telephony.ISms$Stub");
-        Object iSms = stub.getMethod("asInterface", Class.forName("android.os.IBinder")).invoke(null, binder);
-        StringBuilder sb = new StringBuilder("{\"ok\":true,\"methods\":[");
-        boolean first = true;
-        for (Method m : iSms.getClass().getMethods()) {
-            if (!m.getName().toLowerCase().contains("sendtext")) continue;
-            if (!first) sb.append(',');
-            first = false;
-            sb.append('"').append(m.getName()).append('(');
-            Class<?>[] p = m.getParameterTypes();
-            for (int i = 0; i < p.length; i++) {
-                if (i > 0) sb.append(',');
-                sb.append(p[i].getSimpleName());
-            }
-            sb.append(")\"");
-        }
-        sb.append("]}");
-        ok(sb.toString());
-    }
-
-    private static int defaultSmsSubId() {
-        try {
-            Class<?> sm = Class.forName("android.telephony.SubscriptionManager");
-            Object v = sm.getMethod("getDefaultSmsSubscriptionId").invoke(null);
-            return v instanceof Integer ? (Integer) v : -1;
-        } catch (Throwable t) { return -1; }
     }
 
     private static Object newBuilderFrom(Object current) throws Exception {
@@ -399,7 +305,7 @@ public final class Main {
             if (w != null) {
                 String str = w.toString();
                 // WifiSsid.toString() yields quoted UTF-8; strip surrounding quotes
-                if (str.length() >= 2 && str.startsWith("\"") && str.endsWith("\"")) {
+                if (str.length() >= 2 && str.startsWith(""") && str.endsWith(""")) {
                     return str.substring(1, str.length() - 1);
                 }
                 return str;
@@ -477,17 +383,18 @@ public final class Main {
 
     private static String jstr(String s) {
         if (s == null) return "null";
-        StringBuilder b = new StringBuilder("\"");
+        StringBuilder b = new StringBuilder(""");
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
             switch (c) {
-                case '"': b.append("\\\""); break;
-                case '\\': b.append("\\\\"); break;
-                case '\n': b.append("\\n"); break;
-                case '\r': b.append("\\r"); break;
-                case '\t': b.append("\\t"); break;
+                case '"': b.append("\""); break;
+                case '\': b.append("\\"); break;
+                case '
+': b.append("\n"); break;
+                case '': b.append("\r"); break;
+                case '	': b.append("\t"); break;
                 default:
-                    if (c < 0x20) b.append(String.format("\\u%04x", (int) c));
+                    if (c < 0x20) b.append(String.format("\u%04x", (int) c));
                     else b.append(c);
             }
         }
@@ -507,7 +414,7 @@ public final class Main {
     }
 
     private static void fail(String msg) {
-        System.out.println("{\"ok\":false,\"error\":" + jstr(msg) + "}");
+        System.out.println("{"ok":false,"error":" + jstr(msg) + "}");
         System.exit(1);
     }
 

@@ -88,8 +88,13 @@ class MainActivity : AppCompatActivity() {
             toast("端口需在 1024-65535 之间")
             return
         }
+        val newPw = binding.etPassword.text.toString().trim()
+        if (newPw.length < 8) {
+            toast("密码长度至少需 8 位")
+            return
+        }
         manager.prefs.webPort = port
-        manager.prefs.webPassword = binding.etPassword.text.toString().ifBlank { Prefs.DEFAULT_PASSWORD }
+        manager.prefs.webPassword = newPw
         // Recreate the service so the web server rebinds with the new settings.
         stopService(Intent(this, HotspotService::class.java))
         HotspotService.start(this, autoStart = false)
@@ -118,7 +123,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestPermissions() {
-        val wanted = mutableListOf(Manifest.permission.SEND_SMS)
+        val wanted = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             wanted.add(Manifest.permission.POST_NOTIFICATIONS)
         }

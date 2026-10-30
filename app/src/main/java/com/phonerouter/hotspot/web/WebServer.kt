@@ -1,23 +1,20 @@
 package com.phonerouter.hotspot.web
 
 import android.content.Context
-import com.phonerouter.hotspot.feature.FileRepo
-import com.phonerouter.hotspot.feature.SmsRepo
+import com.phonerouter.hotspot.Prefs
 import com.phonerouter.hotspot.hotspot.HotspotManager
+import com.phonerouter.hotspot.hotspot.NetUtils
 import com.phonerouter.hotspot.hotspot.Schedule
 import com.phonerouter.hotspot.hotspot.ScheduleManager
 import fi.iki.elonen.NanoHTTPD
-import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
-import java.io.FileInputStream
+import java.security.MessageDigest
 import java.security.SecureRandom
-import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Embedded management server. Serves the static web UI from assets/web and a JSON API
- * guarded by a token from /api/login. Bound to all interfaces, reachable at
- * http://192.168.43.1:<port> from any hotspot client.
+ * guarded by a token from /api/login. Restricted strictly to loopback and hotspot LAN clients.
  */
 class WebServer(
     private val context: Context,
@@ -26,34 +23,63 @@ class WebServer(
     private val password: String,
 ) : NanoHTTPD(port) {
 
-    private val tokens = Collections.synchronizedSet(HashSet<String>())
+    private val tokens = ConcurrentHashMap<String, Long>()
+    private val loginFailures = ConcurrentHashMap<String, FailureRecord>()
     private val rng = SecureRandom()
     private val schedules = ScheduleManager(context)
-    private val sms = SmsRepo(context)
-    private val files = FileRepo(context)
+
+    private data class FailureRecord(val count: Int, val windowStartMs: Long, val lockedUntilMs: Long)
 
     override fun serve(session: IHTTPSession): Response {
         return try {
+            val remoteIp = session.remoteIpAddress ?: ""
+            if (!isAllowedRemoteIp(remoteIp)) {
+                return json(
+                    Response.Status.FORBIDDEN,
+                    JSONObject().put("ok", false).put("error", "forbidden network interface")
+                )
+            }
             val uri = session.uri
             when {
-                uri.startsWith("/api/") -> handleApi(session, uri)
+                uri.startsWith("/api/") -> handleApi(session, uri, remoteIp)
                 else -> serveStatic(uri)
             }
         } catch (t: Throwable) {
-            json(Response.Status.INTERNAL_ERROR, JSONObject().put("ok", false).put("error", t.message ?: "error"))
+            json(Response.Status.INTERNAL_ERROR, JSONObject().put("ok", false).put("error", "internal error"))
         }
+    }
+
+    /**
+     * Only allow requests from loopback or the active Wi-Fi hotspot subnet.
+     * Rejects requests arriving over mobile data (rmnet/ccmni) or upstream WAN interfaces.
+     */
+    private fun isAllowedRemoteIp(ip: String): Boolean {
+        if (ip == "127.0.0.1" || ip == "::1" || ip == "0:0:0:0:0:0:0:1") return true
+        val gatewayPrefix = Prefs.GATEWAY.substringBeforeLast('.') + "."
+        if (ip.startsWith(gatewayPrefix)) return true
+        val livePrefixes = NetUtils.apIPv4Prefixes(NetUtils.apInterface())
+        return livePrefixes.any { ip.startsWith(it) }
     }
 
     // ---- API ----------------------------------------------------------------
 
-    private fun handleApi(session: IHTTPSession, uri: String): Response {
+    private fun handleApi(session: IHTTPSession, uri: String, remoteIp: String): Response {
         if (uri == "/api/login" && session.method == Method.POST) {
+            val now = System.currentTimeMillis()
+            val record = loginFailures[remoteIp]
+            if (record != null && now < record.lockedUntilMs) {
+                return json(
+                    Response.Status.FORBIDDEN,
+                    JSONObject().put("ok", false).put("error", "尝试次数过多，请稍后再试")
+                )
+            }
             val pw = readJson(session).optString("password")
-            return if (pw == password) {
-                val token = newToken()
-                tokens.add(token)
+            return if (constantTimeEquals(pw, password)) {
+                loginFailures.remove(remoteIp)
+                val token = issueToken(now)
                 json(Response.Status.OK, JSONObject().put("ok", true).put("token", token))
             } else {
+                recordFailure(remoteIp, now)
                 json(Response.Status.FORBIDDEN, JSONObject().put("ok", false).put("error", "密码错误"))
             }
         }
@@ -137,79 +163,70 @@ class WebServer(
                 schedules.setEnabled(b.optLong("id", 0), b.optBoolean("enabled", true)); okResp()
             }
 
-            // SMS
-            uri == "/api/sms/subs" && get ->
-                json(Response.Status.OK, JSONObject().put("ok", true).put("subs", sms.subs()))
-            uri == "/api/sms" && get -> {
-                val box = param(session, "box") ?: "inbox"
-                val limit = param(session, "limit")?.toIntOrNull() ?: 50
-                json(Response.Status.OK, JSONObject().put("ok", true).put("messages", sms.messages(box, limit)))
-            }
-            uri == "/api/sms/send" && post -> {
-                val b = readJson(session)
-                json(Response.Status.OK, sms.send(b.optInt("subId", 0), b.optString("to"), b.optString("body")))
-            }
-
-            // files
-            uri == "/api/files" && get -> json(Response.Status.OK, files.list(param(session, "path")))
-            uri == "/api/files/download" && get -> downloadFile(param(session, "path"))
-            uri == "/api/files/mkdir" && post -> {
-                val b = readJson(session); json(Response.Status.OK, files.mkdir(b.optString("path", "/"), b.optString("name")))
-            }
-            uri == "/api/files/delete" && post ->
-                json(Response.Status.OK, files.delete(readJson(session).optString("path")))
-            uri == "/api/files/rename" && post -> {
-                val b = readJson(session); json(Response.Status.OK, files.rename(b.optString("path"), b.optString("newName")))
-            }
-            uri == "/api/files/upload" && post -> uploadFile(session)
+            // SMS & File endpoints are disabled for security
+            uri.startsWith("/api/sms") || uri.startsWith("/api/files") ->
+                json(Response.Status.FORBIDDEN, JSONObject().put("ok", false).put("error", "disabled for security"))
 
             else -> json(Response.Status.NOT_FOUND, JSONObject().put("ok", false).put("error", "not found"))
         }
     }
 
-    private fun downloadFile(path: String?): Response {
-        val f = files.prepareDownload(path) ?: return json(
-            Response.Status.NOT_FOUND, JSONObject().put("ok", false).put("error", "文件不可读")
-        )
-        val resp = newFixedLengthResponse(
-            Response.Status.OK, "application/octet-stream", FileInputStream(f), f.length()
-        )
-        resp.addHeader("Content-Disposition", "attachment; filename*=UTF-8''${encode(f.name)}")
-        return resp
+    private fun constantTimeEquals(a: String, b: String): Boolean {
+        if (b.isBlank()) return false
+        return MessageDigest.isEqual(a.toByteArray(Charsets.UTF_8), b.toByteArray(Charsets.UTF_8))
     }
 
-    private fun uploadFile(session: IHTTPSession): Response {
-        val map = HashMap<String, String>()
-        session.parseBody(map)
-        val params = session.parameters
-        val targetDir = params["path"]?.firstOrNull() ?: "/"
-        val fname = params["file"]?.firstOrNull() ?: "upload.bin"
-        val tmpPath = map["file"] ?: return json(
-            Response.Status.BAD_REQUEST, JSONObject().put("ok", false).put("error", "无文件")
-        )
-        return json(Response.Status.OK, files.saveUpload(targetDir, fname, File(tmpPath)))
+    private fun recordFailure(ip: String, now: Long) {
+        val current = loginFailures[ip]
+        if (current == null || now - current.windowStartMs > LOGIN_WINDOW_MS) {
+            loginFailures[ip] = FailureRecord(1, now, 0L)
+        } else {
+            val nextCount = current.count + 1
+            val lockUntil = if (nextCount >= MAX_LOGIN_ATTEMPTS) now + LOCKOUT_DURATION_MS else 0L
+            loginFailures[ip] = FailureRecord(nextCount, current.windowStartMs, lockUntil)
+        }
+    }
+
+    private fun issueToken(now: Long): String {
+        pruneTokens(now)
+        if (tokens.size >= MAX_TOKENS) {
+            val oldest = tokens.entries.minByOrNull { it.value }?.key
+            if (oldest != null) tokens.remove(oldest)
+        }
+        val bytes = ByteArray(24)
+        rng.nextBytes(bytes)
+        val token = bytes.joinToString("") { "%02x".format(it) }
+        tokens[token] = now + TOKEN_TTL_MS
+        return token
+    }
+
+    private fun pruneTokens(now: Long) {
+        val it = tokens.entries.iterator()
+        while (it.hasNext()) {
+            if (it.next().value < now) it.remove()
+        }
     }
 
     private fun authorized(session: IHTTPSession): Boolean {
-        session.headers["x-auth"]?.let { if (tokens.contains(it)) return true }
-        param(session, "token")?.let { if (tokens.contains(it)) return true }
+        val now = System.currentTimeMillis()
+        pruneTokens(now)
+        session.headers["x-auth"]?.let { if (tokens.containsKey(it)) return true }
         session.headers["cookie"]?.let { cookie ->
             val tok = cookie.split(";").map { it.trim() }
                 .firstOrNull { it.startsWith("pr_token=") }?.substringAfter("pr_token=")
-            if (tok != null && tokens.contains(tok)) return true
+            if (tok != null && tokens.containsKey(tok)) return true
         }
         return false
-    }
-
-    private fun newToken(): String {
-        val bytes = ByteArray(24); rng.nextBytes(bytes)
-        return bytes.joinToString("") { "%02x".format(it) }
     }
 
     // ---- static --------------------------------------------------------------
 
     private fun serveStatic(uri: String): Response {
-        val path = if (uri == "/" || uri.isEmpty()) "web/index.html" else "web${uri}"
+        val cleanUri = uri.substringBefore('?').substringBefore('#')
+        if (cleanUri.contains("..") || cleanUri.contains('\\') || cleanUri.contains('\u0000')) {
+            return newFixedLengthResponse(Response.Status.FORBIDDEN, "text/plain", "403")
+        }
+        val path = if (cleanUri == "/" || cleanUri.isEmpty()) "web/index.html" else "web/${cleanUri.trimStart('/')}"
         return try {
             val bytes = context.assets.open(path).use { it.readBytes() }
             newFixedLengthResponse(Response.Status.OK, mime(path), bytes.inputStream(), bytes.size.toLong())
@@ -230,9 +247,6 @@ class WebServer(
 
     // ---- helpers --------------------------------------------------------------
 
-    private fun param(session: IHTTPSession, key: String): String? =
-        session.parameters[key]?.firstOrNull()
-
     private fun readJson(session: IHTTPSession): JSONObject {
         return try {
             val map = HashMap<String, String>()
@@ -244,9 +258,6 @@ class WebServer(
         }
     }
 
-    private fun encode(s: String): String =
-        java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20")
-
     private fun json(status: Response.Status, obj: JSONObject): Response =
         newFixedLengthResponse(status, "application/json; charset=utf-8", obj.toString())
 
@@ -257,4 +268,12 @@ class WebServer(
 
     private fun JSONObject.optIntOrNull(key: String): Int? =
         if (has(key) && !isNull(key)) optInt(key) else null
+
+    companion object {
+        private const val MAX_LOGIN_ATTEMPTS = 5
+        private const val LOGIN_WINDOW_MS = 60_000L
+        private const val LOCKOUT_DURATION_MS = 300_000L
+        private const val TOKEN_TTL_MS = 12 * 3600_000L
+        private const val MAX_TOKENS = 16
+    }
 }

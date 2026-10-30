@@ -12,9 +12,10 @@ import java.io.File
  */
 class PrivClient(private val context: Context) {
 
-    private val shimRemote = "/data/local/tmp/phonerouter_shim.jar"
+    // Stored in /data/system owned by system:system (1000:1000) mode 0400 so shell (2000)
+    // and unprivileged apps cannot tamper with the privileged DEX archive.
+    private val shimRemote = "/data/system/phonerouter_shim.jar"
 
-    /** Copy shim.jar out of assets to a world-readable path the system uid can exec. */
     @Synchronized
     fun ensureDeployed(): Boolean {
         val local = File(context.filesDir, "shim.jar")
@@ -25,11 +26,13 @@ class PrivClient(private val context: Context) {
         } catch (t: Throwable) {
             return false
         }
+        val escapedLocal = local.absolutePath.replace("'", "'\\''")
         val res = RootShell.run(
             listOf(
-                "cp '${local.absolutePath}' '$shimRemote'",
-                "chmod 644 '$shimRemote'",
-                "chcon u:object_r:shell_data_file:s0 '$shimRemote' 2>/dev/null || true",
+                "cp '$escapedLocal' '$shimRemote'",
+                "chown 1000:1000 '$shimRemote'",
+                "chmod 0400 '$shimRemote'",
+                "chcon u:object_r:system_data_file:s0 '$shimRemote' 2>/dev/null || true",
                 "ls -l '$shimRemote'"
             )
         )
@@ -75,17 +78,22 @@ class PrivClient(private val context: Context) {
         return invoke(sb.toString())
     }
 
-    fun blockClient(mac: String, block: Boolean): JSONObject =
-        invoke((if (block) "block-client" else "unblock-client") + " mac=$mac")
+    fun blockClient(mac: String, block: Boolean): JSONObject {
+        val cleanMac = mac.trim()
+        if (!MAC_REGEX.matches(cleanMac)) {
+            return JSONObject().put("ok", false).put("error", "invalid MAC address")
+        }
+        return invoke((if (block) "block-client" else "unblock-client") + " mac=$cleanMac")
+    }
 
     /** Mobile data used between [startMs] and [endMs] from NetworkStatsManager. */
     fun dataUsage(startMs: Long, endMs: Long): JSONObject =
         invoke("data-usage start=$startMs end=$endMs")
 
-    /** Send an SMS from the system uid (no MIUI per-send confirmation). */
-    fun sendSms(subId: Int, to: String, body: String): JSONObject =
-        invoke("send-sms sub=$subId tob64=${b64(to)} bodyb64=${b64(body)}")
-
     private fun b64(s: String): String =
         Base64.encodeToString(s.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+
+    companion object {
+        private val MAC_REGEX = Regex("^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}$")
+    }
 }

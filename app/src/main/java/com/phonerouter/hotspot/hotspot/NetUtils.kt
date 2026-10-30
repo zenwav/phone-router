@@ -6,6 +6,11 @@ import com.phonerouter.hotspot.root.RootShell
 /** Network interface helpers for the SoftAp (hotspot) link. */
 object NetUtils {
 
+    private val IFACE_REGEX = Regex("^[a-zA-Z0-9_.-]+$")
+
+    fun sanitizeIface(iface: String): String =
+        if (IFACE_REGEX.matches(iface)) iface else Prefs.AP_IFACE
+
     /** Interface that currently owns the gateway IP, else the configured default. */
     fun apInterface(): String {
         val res = RootShell.run("ip -4 -o addr show 2>/dev/null")
@@ -14,7 +19,7 @@ object NetUtils {
             for (line in res.out.lines()) {
                 if (line.contains(Prefs.GATEWAY)) {
                     val parts = line.trim().split(Regex("\\s+"))
-                    if (parts.size >= 2) return parts[1]
+                    if (parts.size >= 2) return sanitizeIface(parts[1])
                 }
             }
         }
@@ -29,13 +34,10 @@ object NetUtils {
 
     /**
      * All /24 IPv4 prefixes (e.g. "192.168.119.") currently assigned on [iface].
-     *
-     * The LSPosed hook selects 192.168.43.1/24 during initial Wi-Fi configuration.
-     * The system may still choose another prefix after a conflict, or if the hook
-     * is unavailable. Client discovery should use the live interface addresses.
      */
     fun apIPv4Prefixes(iface: String): List<String> {
-        val res = RootShell.run("ip -4 -o addr show dev $iface 2>/dev/null")
+        val safeIface = sanitizeIface(iface)
+        val res = RootShell.run("ip -4 -o addr show dev $safeIface 2>/dev/null")
         if (!res.ok) return emptyList()
         val prefixes = mutableListOf<String>()
         val re = Regex("""inet (\d+\.\d+\.\d+)\.\d+/(\d+)""")
@@ -54,12 +56,13 @@ object NetUtils {
      * its own network namespace in /proc/net/dev and would read zero for wlan1.
      */
     fun traffic(iface: String): Traffic {
+        val safeIface = sanitizeIface(iface)
         try {
             val res = RootShell.run("cat /proc/net/dev 2>/dev/null")
             if (!res.ok) return Traffic(0, 0)
             val line = res.out.lines()
                 .map { it.trim() }
-                .firstOrNull { it.startsWith("$iface:") }
+                .firstOrNull { it.startsWith("$safeIface:") }
                 ?: return Traffic(0, 0)
             // fields after "iface:": rxBytes(0) rxPackets ... txBytes(8) ...
             val f = line.substringAfter(':').trim().split(Regex("\\s+"))
