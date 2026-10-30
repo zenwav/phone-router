@@ -109,7 +109,7 @@ public final class Main {
         if (!start) {
             Method stop = findMethod(tm.getClass(), "stopTethering", 1);
             stop.invoke(tm, TETHERING_WIFI);
-            ok("{"ok":true,"action":"stop"}");
+            ok("{\"ok\":true,\"action\":\"stop\"}");
             return;
         }
 
@@ -152,7 +152,7 @@ public final class Main {
 
         latch.await(20, TimeUnit.SECONDS);
         if (started[0]) {
-            ok("{"ok":true,"action":"start"}");
+            ok("{\"ok\":true,\"action\":\"start\"}");
         } else {
             fail("tethering failed, code=" + errCode[0]);
         }
@@ -169,14 +169,14 @@ public final class Main {
         Object cfg = currentConfig(wm);
         StringBuilder sb = new StringBuilder();
         sb.append('{');
-        sb.append(""ok":true");
-        sb.append(","ssid":").append(jstr(readSsid(cfg)));
-        sb.append(","passphrase":").append(jstr(readString(cfg, "getPassphrase")));
-        sb.append(","security":").append(readInt(cfg, "getSecurityType", 1));
-        sb.append(","band":").append(readInt(cfg, "getBand", 1));
-        sb.append(","hidden":").append(readBool(cfg, "isHiddenSsid"));
-        sb.append(","maxClients":").append(readInt(cfg, "getMaxNumberOfClients", 0));
-        sb.append(","blocked":[");
+        sb.append("\"ok\":true");
+        sb.append(",\"ssid\":").append(jstr(readSsid(cfg)));
+        sb.append(",\"passphrase\":").append(jstr(readString(cfg, "getPassphrase")));
+        sb.append(",\"security\":").append(readInt(cfg, "getSecurityType", 1));
+        sb.append(",\"band\":").append(readInt(cfg, "getBand", 1));
+        sb.append(",\"hidden\":").append(readBool(cfg, "isHiddenSsid"));
+        sb.append(",\"maxClients\":").append(readInt(cfg, "getMaxNumberOfClients", 0));
+        sb.append(",\"blocked\":[");
         List<String> blocked = readBlocked(cfg);
         for (int i = 0; i < blocked.size(); i++) {
             if (i > 0) sb.append(',');
@@ -222,7 +222,7 @@ public final class Main {
         Object cfg = builder.getClass().getMethod("build").invoke(builder);
         boolean r = (Boolean) wm.getClass().getMethod("setSoftApConfiguration",
                 Class.forName("android.net.wifi.SoftApConfiguration")).invoke(wm, cfg);
-        ok("{"ok":" + r + "}");
+        ok("{\"ok\":" + r + "}");
     }
 
     private static void blockClient(Context ctx, String mac, boolean block) throws Exception {
@@ -252,7 +252,7 @@ public final class Main {
         Object cfg = builder.getClass().getMethod("build").invoke(builder);
         boolean r = (Boolean) wm.getClass().getMethod("setSoftApConfiguration",
                 Class.forName("android.net.wifi.SoftApConfiguration")).invoke(wm, cfg);
-        ok("{"ok":" + r + ","mac":" + jstr(mac) + ","blocked":" + block + "}");
+        ok("{\"ok\":" + r + ",\"mac\":" + jstr(mac) + ",\"blocked\":" + block + "}");
     }
 
     // ---- mobile data usage (NetworkStatsManager, system uid) -----------------
@@ -273,7 +273,7 @@ public final class Main {
         Object bucket = q.invoke(nsm, 0, null, start, end);
         long rx = (Long) bucket.getClass().getMethod("getRxBytes").invoke(bucket);
         long tx = (Long) bucket.getClass().getMethod("getTxBytes").invoke(bucket);
-        ok("{"ok":true,"rxBytes":" + rx + ","txBytes":" + tx + ","totalBytes":" + (rx + tx) + "}");
+        ok("{\"ok\":true,\"rxBytes\":" + rx + ",\"txBytes\":" + tx + ",\"totalBytes\":" + (rx + tx) + "}");
     }
 
     private static long parseLong(String s, long dflt) {
@@ -305,7 +305,7 @@ public final class Main {
             if (w != null) {
                 String str = w.toString();
                 // WifiSsid.toString() yields quoted UTF-8; strip surrounding quotes
-                if (str.length() >= 2 && str.startsWith(""") && str.endsWith(""")) {
+                if (str.length() >= 2 && str.startsWith("\"") && str.endsWith("\"")) {
                     return str.substring(1, str.length() - 1);
                 }
                 return str;
@@ -383,18 +383,17 @@ public final class Main {
 
     private static String jstr(String s) {
         if (s == null) return "null";
-        StringBuilder b = new StringBuilder(""");
+        StringBuilder b = new StringBuilder("\"");
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
             switch (c) {
-                case '"': b.append("\""); break;
-                case '\': b.append("\\"); break;
-                case '
-': b.append("\n"); break;
-                case '': b.append("\r"); break;
-                case '	': b.append("\t"); break;
+                case '"': b.append("\\\""); break;
+                case '\\': b.append("\\\\"); break;
+                case '\n': b.append("\\n"); break;
+                case '\r': b.append("\\r"); break;
+                case '\t': b.append("\\t"); break;
                 default:
-                    if (c < 0x20) b.append(String.format("\u%04x", (int) c));
+                    if (c < 0x20) b.append(String.format("\\u%04x", (int) c));
                     else b.append(c);
             }
         }
@@ -414,7 +413,7 @@ public final class Main {
     }
 
     private static void fail(String msg) {
-        System.out.println("{"ok":false,"error":" + jstr(msg) + "}");
+        System.out.println("{\"ok\":false,\"error\":" + jstr(msg) + "}");
         System.exit(1);
     }
 
