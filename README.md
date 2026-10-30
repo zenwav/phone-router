@@ -40,7 +40,8 @@ Claude and GPT.
   - `com.google.android.networkstack.tethering`
 - Reboot after enabling the module, changing scope, or updating hook code.
 - Start the hotspot, connect another device, and open
-  `http://192.168.43.1:8080`. The initial password is `admin`; change it in the app.
+  `http://192.168.43.1:8080`. The web password is randomly generated on first
+  launch and shown in the app; change it there.
 
 The module is included in this APK. Do not also enable SoftApHelper's equivalent
 hook. Only its Wi-Fi fixed-IP behavior is included, not its other tether types,
@@ -74,10 +75,15 @@ For a signed release, copy `keystore.properties.example` to
 
 With signing configured, the output is
 `app/build/outputs/apk/release/app-release.apk`. Without it, Gradle produces an
-unsigned release APK. CI intentionally has no release key and uploads unsigned
-release and debug artifacts; installable signed distributions are in Releases.
-Never commit a keystore or real signing properties. Keep the signing key backed
-up to retain the ability to publish compatible updates.
+unsigned release APK, which Android will not install.
+
+CI reads the signing key from the `RELEASE_KEYSTORE_BASE64`,
+`RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD`
+repository secrets, then verifies the signed APK before uploading it. See
+[docs/RELEASE_SIGNING.md](docs/RELEASE_SIGNING.md) for generating a key and
+configuring the secrets. Never commit a keystore or real signing properties.
+Keep the signing key backed up to retain the ability to publish compatible
+updates.
 
 ## Source layout
 

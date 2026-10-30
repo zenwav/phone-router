@@ -10,6 +10,28 @@ val releaseProperties = Properties().apply {
     if (config.isFile) config.inputStream().use { load(it) }
 }
 
+// Signing values come from keystore.properties locally, or from environment
+// variables injected by CI (GitHub Actions secrets). Absent values leave the
+// release APK unsigned, matching a plain `assembleRelease` run.
+fun releaseSigningValue(propertyName: String, envName: String): String? =
+    releaseProperties.getProperty(propertyName)?.takeIf { it.isNotBlank() }
+        ?: System.getenv(envName)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = releaseSigningValue("storeFile", "RELEASE_STORE_FILE")
+val releaseStorePassword = releaseSigningValue("storePassword", "RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = releaseSigningValue("keyAlias", "RELEASE_KEY_ALIAS")
+val releaseKeyPassword = releaseSigningValue("keyPassword", "RELEASE_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { it != null }
+
+if (!hasReleaseSigning && listOf(releaseStorePassword, releaseKeyAlias, releaseKeyPassword).any { it != null }) {
+    logger.warn("Release signing is partially configured; the release APK will be unsigned.")
+}
+
 android {
     namespace = "com.phonerouter.hotspot"
     compileSdk = 34
@@ -24,12 +46,12 @@ android {
 
     buildTypes {
         release {
-            if (releaseProperties.isNotEmpty()) {
+            if (hasReleaseSigning) {
                 signingConfig = signingConfigs.create("release") {
-                    storeFile = rootProject.file(releaseProperties.getProperty("storeFile"))
-                    storePassword = releaseProperties.getProperty("storePassword")
-                    keyAlias = releaseProperties.getProperty("keyAlias")
-                    keyPassword = releaseProperties.getProperty("keyPassword")
+                    storeFile = rootProject.file(releaseStoreFile!!)
+                    storePassword = releaseStorePassword
+                    keyAlias = releaseKeyAlias
+                    keyPassword = releaseKeyPassword
                 }
             }
             isMinifyEnabled = false
