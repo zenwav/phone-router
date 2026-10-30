@@ -13,7 +13,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      RELEASE_STORE_FILE: ${{ runner.temp }}/release.keystore
       RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
       RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
       RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
@@ -32,16 +31,23 @@ jobs:
         run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
       - uses: gradle/actions/setup-gradle@v4
       - name: Require signing secrets on main
-        if: github.event_name != 'pull_request' && env.RELEASE_KEYSTORE_BASE64 == ''
+        if: github.event_name != 'pull_request'
         run: |
-          echo "::error::Missing release signing secrets. Configure RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS and RELEASE_KEY_PASSWORD (see docs/RELEASE_SIGNING.md)."
-          exit 1
+          if [ -z "$RELEASE_KEYSTORE_BASE64" ] || [ -z "$RELEASE_STORE_PASSWORD" ] \
+            || [ -z "$RELEASE_KEY_ALIAS" ] || [ -z "$RELEASE_KEY_PASSWORD" ]; then
+            echo "::error::Missing release signing secrets. Configure RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS and RELEASE_KEY_PASSWORD (see docs/RELEASE_SIGNING.md)."
+            exit 1
+          fi
       - name: Decode release keystore
         if: env.RELEASE_KEYSTORE_BASE64 != ''
+        env:
+          RELEASE_STORE_FILE: ${{ runner.temp }}/release.keystore
         run: |
           printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RELEASE_STORE_FILE"
           test -s "$RELEASE_STORE_FILE"
       - name: Build and verify
+        env:
+          RELEASE_STORE_FILE: ${{ runner.temp }}/release.keystore
         run: bash ./gradlew :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintDebug --console=plain
       - name: Verify release APK signature
         if: env.RELEASE_KEYSTORE_BASE64 != ''
